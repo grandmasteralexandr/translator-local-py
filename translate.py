@@ -26,19 +26,29 @@ PROMPT_PASS_1 = (
     f"CRITICAL RULES:\n"
     f'1. The input consists of paragraphs wrapped in <p id="..."> tags.\n'
     f'2. You MUST return the translation wrapped in the EXACT same <p id="..."> tags.\n'
-    f"3. Do not combine paragraphs. Do not output the original {SRC_LANG} text.\n"
+    f"3. Do not combine paragraphs. Do not output the original text.\n"
     f"4. Preserve all internal XML tags (like <emphasis>).\n"
-    f"5. Anything before '{DELIMITER}' is story context. DO NOT translate it."
+    f"5. Anything before '{DELIMITER}' is story context. DO NOT translate it.\n\n"
+    f"EXAMPLE OF OUTPUT FORMAT:\n"
+    f"Input:\n"
+    f'<p id="0">Сонце повільно сходило над старим містом, висвітлюючи <emphasis>порожні</emphasis> вулиці.</p>\n'
+    f"Output:\n"
+    f'<p id="0">Le soleil se levait lentement sur la vieille ville, éclairant les rues <emphasis>désertes</emphasis>.</p>'
 )
 
 PROMPT_PASS_2 = (
-    f"You are a master literary editor.\n"
-    f"TASK: Improve the style, flow, and vocabulary of the rough translation inside '{DELIMITER}' so it reads naturally and idiomatically in {TARGET_LANG}\n"
+    f"You are a master literary editor for {TARGET_LANG} language.\n"
+    f"TASK: Improve the style and flow so it reads naturally and idiomatically of the translation inside '{DELIMITER}'.\n"
     f"CRITICAL RULES:\n"
     f'1. The rough translation is wrapped in <p id="..."> tags.\n'
     f'2. You MUST return the refined translation wrapped in the EXACT same <p id="..."> tags.\n'
-    f"3. Do not include the original text or any conversational filler.\n"
-    f"4. Preserve all internal XML tags."
+    f"3. Output ONLY the refined translation, no conversational filler.\n"
+    f"4. Preserve all internal XML tags.\n\n"
+    f"EXAMPLE OF OUTPUT FORMAT:\n"
+    f"Input:\n"
+    f'<p id="0">Le soleil se levait lentement sur la vieille ville, éclairant les rues <emphasis>désertes</emphasis>.</p>\n'
+    f"Output:\n"
+    f'<p id="0">Le soleil s\'élevait doucement au-dessus de la cité antique, illuminant les rues <emphasis>désertes</emphasis>.</p>'
 )
 
 
