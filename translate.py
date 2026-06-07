@@ -1,6 +1,7 @@
 import argparse
 import os
 import re
+
 import requests
 from lxml import etree
 from tqdm import tqdm
@@ -23,8 +24,8 @@ PROMPT_PASS_1 = (
     f"You are an expert book translator from {SRC_LANG} to {TARGET_LANG}.\n"
     f"TASK: Translate the text inside '{DELIMITER}'.\n"
     f"CRITICAL RULES:\n"
-    f"1. The input consists of paragraphs wrapped in <p id=\"...\"> tags.\n"
-    f"2. You MUST return the translation wrapped in the EXACT same <p id=\"...\"> tags.\n"
+    f'1. The input consists of paragraphs wrapped in <p id="..."> tags.\n'
+    f'2. You MUST return the translation wrapped in the EXACT same <p id="..."> tags.\n'
     f"3. Do not combine paragraphs. Do not output the original {SRC_LANG} text.\n"
     f"4. Preserve all internal XML tags (like <emphasis>).\n"
     f"5. Anything before '{DELIMITER}' is story context. DO NOT translate it."
@@ -34,8 +35,8 @@ PROMPT_PASS_2 = (
     f"You are a master literary editor.\n"
     f"TASK: Improve the style, flow, and vocabulary of the rough translation inside '{DELIMITER}' so it reads naturally and idiomatically in {TARGET_LANG}\n"
     f"CRITICAL RULES:\n"
-    f"1. The rough translation is wrapped in <p id=\"...\"> tags.\n"
-    f"2. You MUST return the refined translation wrapped in the EXACT same <p id=\"...\"> tags.\n"
+    f'1. The rough translation is wrapped in <p id="..."> tags.\n'
+    f'2. You MUST return the refined translation wrapped in the EXACT same <p id="..."> tags.\n'
     f"3. Do not include the original text or any conversational filler.\n"
     f"4. Preserve all internal XML tags."
 )
@@ -143,69 +144,69 @@ def translate_fb2_with_context(input_path: str, output_path: str):
 
     for i, chunk in enumerate(tqdm(chunks, desc="Перевод чанков")):
         # 1. Пакуем исходный чанк в ID-теги
-                target_src_payload = ""
-                for local_idx, item in enumerate(chunk):
-                    target_src_payload += f'<p id="{local_idx}">{item[2]}</p>\n'
-                
-                # --- ПРОХОД 1 ---
-                input_pass1 = ""
-                if history_src and history_tgt:
-                    input_pass1 += f"--- PREVIOUS STORY CONTEXT (DO NOT TRANSLATE) ---\n"
-                    input_pass1 += f"Original: {history_src[-CONTEXT_SIZE_CHARS:]}\n"
-                    input_pass1 += f"Translation: {history_tgt[-CONTEXT_SIZE_CHARS:]}\n\n"
-                
-                input_pass1 += f"{DELIMITER}\n{target_src_payload}"
-                
-                translated_payload = call_llm(PROMPT_PASS_1, input_pass1)
-                if not translated_payload.strip():
-                    translated_payload = target_src_payload
-                    
-                # --- ПРОХОД 2 ---
-                input_pass2 = ""
-                if history_tgt:
-                    input_pass2 += f"--- CONTEXT FOR STYLE CONTINUITY ---\n{history_tgt[-CONTEXT_SIZE_CHARS:]}\n\n"
-                
-                input_pass2 += f"Original text:\n{target_src_payload}\n\n"
-                input_pass2 += f"{DELIMITER}\nRough Translation:\n{translated_payload}"
-                
-                final_payload = call_llm(PROMPT_PASS_2, input_pass2)
-                if not final_payload.strip():
-                    final_payload = translated_payload
-                    
-                # 2. ИЗВЛЕКАЕМ ТЕКСТ ПО ID (Жесткая привязка)
-                # Ищем все совпадения вида <p id="0">текст</p>, игнорируя любой мусор между ними
-                matches = re.finditer(r'<p id="(\d+)">(.*?)</p>', final_payload, re.DOTALL)
-                translations_dict = {int(m.group(1)): m.group(2).strip() for m in matches}
-                
-                # 3. БЕЗОПАСНАЯ СБОРКА ОБРАТНО В XML
-                clean_translated_texts = []
-                for local_idx, (global_idx, el, org_text) in enumerate(chunk):
-                    # Достаем перевод по конкретному индексу. Если ЛЛМ его потеряла — берем оригинал
-                    text_out = translations_dict.get(local_idx, "")
-                    if not text_out or text_out == org_text:
-                        text_out = org_text # Защита от дублей или пустых строк
-                        
-                    clean_translated_texts.append(text_out)
-                    
-                    try:
-                        wrapped_xml = f"<p>{text_out}</p>"
-                        new_el = etree.fromstring(wrapped_xml.encode('utf-8'))
-                        el.clear()
-                        el.text = new_el.text
-                        for child in new_el:
-                            el.append(child)
-                    except etree.XMLSyntaxError:
-                        clean_text = text_out.replace("<", "&lt;").replace(">", "&gt;")
-                        el.clear()
-                        el.text = clean_text
-                
-                # 4. ОБНОВЛЕНИЕ ИСТОРИИ (без служебных ID-тегов, чтобы не путать модель)
-                history_src += "\n" + "\n".join([item[2] for item in chunk])
-                history_tgt += "\n" + "\n".join(clean_translated_texts)
-                
-                if i % 10 == 0:
-                    with open(output_path, "wb") as f:
-                        tree.write(f, encoding="utf-8", xml_declaration=True)
+        target_src_payload = ""
+        for local_idx, item in enumerate(chunk):
+            target_src_payload += f'<p id="{local_idx}">{item[2]}</p>\n'
+
+        # --- ПРОХОД 1 ---
+        input_pass1 = ""
+        if history_src and history_tgt:
+            input_pass1 += f"--- PREVIOUS STORY CONTEXT (DO NOT TRANSLATE) ---\n"
+            input_pass1 += f"Original: {history_src[-CONTEXT_SIZE_CHARS:]}\n"
+            input_pass1 += f"Translation: {history_tgt[-CONTEXT_SIZE_CHARS:]}\n\n"
+
+        input_pass1 += f"{DELIMITER}\n{target_src_payload}"
+
+        translated_payload = call_llm(PROMPT_PASS_1, input_pass1)
+        if not translated_payload.strip():
+            translated_payload = target_src_payload
+
+        # --- ПРОХОД 2 ---
+        input_pass2 = ""
+        if history_tgt:
+            input_pass2 += f"--- CONTEXT FOR STYLE CONTINUITY ---\n{history_tgt[-CONTEXT_SIZE_CHARS:]}\n\n"
+
+        input_pass2 += f"Original text:\n{target_src_payload}\n\n"
+        input_pass2 += f"{DELIMITER}\nRough Translation:\n{translated_payload}"
+
+        final_payload = call_llm(PROMPT_PASS_2, input_pass2)
+        if not final_payload.strip():
+            final_payload = translated_payload
+
+        # 2. ИЗВЛЕКАЕМ ТЕКСТ ПО ID (Жесткая привязка)
+        # Ищем все совпадения вида <p id="0">текст</p>, игнорируя любой мусор между ними
+        matches = re.finditer(r'<p id="(\d+)">(.*?)</p>', final_payload, re.DOTALL)
+        translations_dict = {int(m.group(1)): m.group(2).strip() for m in matches}
+
+        # 3. БЕЗОПАСНАЯ СБОРКА ОБРАТНО В XML
+        clean_translated_texts = []
+        for local_idx, (global_idx, el, org_text) in enumerate(chunk):
+            # Достаем перевод по конкретному индексу. Если ЛЛМ его потеряла — берем оригинал
+            text_out = translations_dict.get(local_idx, "")
+            if not text_out or text_out == org_text:
+                text_out = org_text  # Защита от дублей или пустых строк
+
+            clean_translated_texts.append(text_out)
+
+            try:
+                wrapped_xml = f"<p>{text_out}</p>"
+                new_el = etree.fromstring(wrapped_xml.encode("utf-8"))
+                el.clear()
+                el.text = new_el.text
+                for child in new_el:
+                    el.append(child)
+            except etree.XMLSyntaxError:
+                clean_text = text_out.replace("<", "&lt;").replace(">", "&gt;")
+                el.clear()
+                el.text = clean_text
+
+        # 4. ОБНОВЛЕНИЕ ИСТОРИИ (без служебных ID-тегов, чтобы не путать модель)
+        history_src += "\n" + "\n".join([item[2] for item in chunk])
+        history_tgt += "\n" + "\n".join(clean_translated_texts)
+
+        if i % 10 == 0:
+            with open(output_path, "wb") as f:
+                tree.write(f, encoding="utf-8", xml_declaration=True)
 
     # Финальное сохранение
     print("Сохранение финальной книги...")
